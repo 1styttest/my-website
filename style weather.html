@@ -1,0 +1,824 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>StyleWeather ✨ 天氣穿搭助手</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --primary: #7c5c3a; --primary-light: #c4956a; --secondary: #c9788a;
+  --bg: #fdf8f3; --card: #fff9f4; --card-border: #e8ddd0;
+  --text: #4a3728; --text-muted: #9b8878;
+}
+body { font-family:'Segoe UI',-apple-system,system-ui,sans-serif; background:var(--bg); color:var(--text); min-height:100vh; overflow-x:hidden; }
+.header { background:linear-gradient(135deg,#8b6b4a,#c4956a 50%,#c9788a); padding:13px 20px; text-align:center; position:sticky; top:0; z-index:100; box-shadow:0 3px 16px rgba(140,100,70,.25); }
+.header h1 { font-size:1.3rem; font-weight:800; letter-spacing:3px; color:#fff8f0; }
+.header p { font-size:.76rem; opacity:.88; margin-top:2px; color:#ffe8d6; }
+.nav { display:flex; background:var(--card); border-bottom:2px solid var(--card-border); overflow-x:auto; position:sticky; top:52px; z-index:99; }
+.nav-btn { flex:1; min-width:75px; padding:9px 6px 7px; border:none; background:none; color:var(--text-muted); font-size:.74rem; cursor:pointer; transition:all .2s; display:flex; flex-direction:column; align-items:center; gap:3px; border-bottom:2.5px solid transparent; }
+.nav-btn.active { color:var(--primary); border-bottom-color:var(--primary); }
+.nav-btn:hover { color:var(--text); background:rgba(140,100,70,.05); }
+.nav-icon { font-size:1.1rem; }
+.main { padding:13px; max-width:500px; margin:0 auto; }
+.card { background:var(--card); border:1.5px solid var(--card-border); border-radius:18px; padding:14px; margin-bottom:13px; box-shadow:0 2px 12px rgba(140,100,70,.08); }
+.card-title { font-size:.76rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:1.2px; margin-bottom:11px; }
+.weather-search { display:flex; gap:8px; margin-bottom:10px; }
+.weather-search input { flex:1; background:var(--bg); border:1.5px solid var(--card-border); border-radius:10px; padding:9px 13px; color:var(--text); font-size:.87rem; outline:none; transition:border-color .2s; }
+.weather-search input:focus { border-color:var(--primary-light); }
+.btn { padding:9px 15px; border-radius:10px; border:none; cursor:pointer; font-size:.84rem; font-weight:700; transition:all .2s; }
+.btn-primary { background:linear-gradient(135deg,var(--primary),#a07050); color:#fff8f0; }
+.btn-primary:hover { opacity:.88; transform:translateY(-1px); }
+.btn-sm { padding:6px 13px; font-size:.79rem; }
+.weather-display { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; }
+.weather-main { display:flex; align-items:center; gap:12px; }
+.weather-icon { font-size:2.8rem; }
+.weather-city { font-size:.93rem; font-weight:700; color:var(--primary); }
+.weather-temp { font-size:2.3rem; font-weight:800; line-height:1; }
+.weather-unit { font-size:.95rem; color:var(--text-muted); }
+.weather-desc { color:var(--text-muted); font-size:.8rem; margin-top:3px; }
+.weather-details { text-align:right; }
+.weather-detail-item { font-size:.77rem; color:var(--text-muted); margin-bottom:4px; }
+.temp-bar { height:6px; border-radius:3px; background:linear-gradient(to right,#7ab8e8,#7ac8a8,#c8c87a,#e8a87a,#e87a7a); margin:10px 0 4px; position:relative; }
+.temp-indicator { position:absolute; top:-5px; width:16px; height:16px; background:white; border:3px solid var(--primary); border-radius:50%; transform:translateX(-50%); transition:left .6s cubic-bezier(.34,1.56,.64,1); box-shadow:0 2px 8px rgba(0,0,0,.15); }
+.occasion-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; }
+.occasion-btn { display:flex; flex-direction:column; align-items:center; gap:4px; padding:9px 4px; background:var(--bg); border:2px solid var(--card-border); border-radius:13px; cursor:pointer; transition:all .2s; font-size:.72rem; color:var(--text-muted); }
+.occasion-btn.active { border-color:var(--primary-light); color:var(--primary); background:rgba(196,149,106,.1); }
+.occasion-icon { font-size:1.35rem; }
+.style-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
+.style-btn { padding:8px 6px; background:var(--bg); border:2px solid var(--card-border); border-radius:9px; cursor:pointer; font-size:.79rem; color:var(--text-muted); text-align:center; transition:all .2s; }
+.style-btn.active { border-color:var(--secondary); color:var(--secondary); background:rgba(201,120,138,.1); }
+
+/* ── Character Display (Paper-doll hybrid) ── */
+.char-stage {
+  position:relative; width:300px; margin:10px auto 0;
+  display:flex; flex-direction:column; align-items:center;
+}
+.char-face-wrap {
+  position:relative; z-index:3; width:150px; height:150px;
+  border-radius:50%; overflow:hidden;
+  background:transparent;
+  /* subtle glow */
+  filter:drop-shadow(0 4px 18px rgba(196,149,106,.3));
+}
+.char-face-wrap img {
+  width:100%; height:100%; object-fit:cover;
+  border-radius:50%;
+  transition:opacity .4s;
+}
+.char-face-wrap .face-loader {
+  position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+  font-size:2.5rem; background:rgba(255,248,244,.7); border-radius:50%;
+}
+.char-body-wrap {
+  position:relative; margin-top:-30px; /* overlap with bottom of face */
+  width:300px; z-index:2;
+}
+.char-body-wrap svg { width:100%; overflow:visible; }
+
+/* Label chips */
+.char-labels {
+  position:absolute; inset:0; pointer-events:none; z-index:10;
+}
+.char-label {
+  position:absolute; background:#fffaf4; border:1.5px solid #ddd0c0;
+  border-radius:20px; padding:3px 10px; font-size:.72rem; font-weight:700;
+  color:#6b4a2a; white-space:nowrap; pointer-events:none;
+  box-shadow:0 1px 6px rgba(140,100,70,.12);
+}
+.char-label::after {
+  content:''; position:absolute; background:#c4a882;
+  width:1px; height:28px;
+}
+
+/* ── rest of UI ── */
+.outfit-description { margin-top:14px; text-align:center; font-size:.87rem; line-height:1.65; background:linear-gradient(135deg,rgba(196,149,106,.08),rgba(201,120,138,.08)); border:1.5px solid rgba(196,149,106,.25); border-radius:13px; padding:12px; }
+.outfit-tags { display:flex; flex-wrap:wrap; gap:6px; margin-top:10px; }
+.outfit-tag { padding:5px 12px; border-radius:20px; font-size:.74rem; border:1.5px solid; }
+.tag-top { border-color:#c4956a; color:#8b5e3a; background:rgba(196,149,106,.12); }
+.tag-bottom { border-color:#8aadcc; color:#3a6a8b; background:rgba(138,173,204,.12); }
+.tag-outer { border-color:#7ab87a; color:#3a6e3a; background:rgba(122,184,122,.12); }
+.tag-shoes { border-color:#b88a6a; color:#6b4a2a; background:rgba(184,138,106,.12); }
+.tag-acc { border-color:#c9788a; color:#8b3a4a; background:rgba(201,120,138,.12); }
+.record-btn { width:100%; padding:12px; border-radius:13px; background:linear-gradient(135deg,var(--primary),var(--secondary)); border:none; color:white; font-size:.88rem; font-weight:700; cursor:pointer; transition:opacity .2s,transform .2s; margin-top:12px; }
+.record-btn:hover { opacity:.9; transform:translateY(-1px); }
+.upload-zone { border:2px dashed var(--card-border); border-radius:13px; padding:22px; text-align:center; cursor:pointer; transition:all .2s; display:block; }
+.upload-zone:hover { border-color:var(--primary-light); background:rgba(196,149,106,.04); }
+.upload-zone input[type="file"] { display:none; }
+.category-tabs { display:flex; gap:6px; overflow-x:auto; margin-bottom:11px; padding-bottom:2px; scrollbar-width:none; }
+.category-tabs::-webkit-scrollbar { display:none; }
+.category-tab { padding:5px 13px; background:var(--bg); border:1.5px solid var(--card-border); border-radius:20px; font-size:.78rem; cursor:pointer; white-space:nowrap; transition:all .2s; color:var(--text-muted); }
+.category-tab.active { background:var(--primary); border-color:var(--primary); color:white; }
+.wardrobe-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
+.wardrobe-item { aspect-ratio:1; border-radius:11px; overflow:hidden; border:2px solid var(--card-border); position:relative; cursor:pointer; transition:all .2s; }
+.wardrobe-item:hover { border-color:var(--primary-light); transform:scale(1.04); }
+.wardrobe-item img { width:100%; height:100%; object-fit:cover; }
+.item-label { position:absolute; bottom:0; left:0; right:0; background:linear-gradient(transparent,rgba(74,55,40,.75)); padding:8px 5px 4px; font-size:.67rem; color:#fff8f0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.item-delete { position:absolute; top:4px; right:4px; background:rgba(201,120,138,.88); color:white; border:none; border-radius:50%; width:20px; height:20px; font-size:.65rem; cursor:pointer; display:none; align-items:center; justify-content:center; }
+.wardrobe-item:hover .item-delete { display:flex; }
+.week-day-card { display:flex; gap:11px; padding:11px; background:var(--bg); border-radius:11px; margin-bottom:8px; align-items:center; border:1.5px solid var(--card-border); transition:background .2s; }
+.week-day-card:hover { background:rgba(196,149,106,.06); }
+.week-day-info { flex:1; }
+.week-day-name { font-size:.88rem; font-weight:700; }
+.week-day-weather { font-size:.76rem; color:var(--text-muted); margin-top:2px; }
+.week-day-outfit { font-size:.76rem; color:var(--primary); margin-top:4px; }
+.history-item { display:flex; gap:11px; padding:11px; background:var(--bg); border-radius:11px; margin-bottom:8px; align-items:flex-start; border:1.5px solid var(--card-border); }
+.history-date { min-width:46px; text-align:center; font-size:.76rem; color:var(--text-muted); }
+.history-date .day { font-size:1.45rem; font-weight:800; color:var(--primary); line-height:1; }
+.notification-banner { background:linear-gradient(135deg,rgba(138,173,204,.22),rgba(122,184,122,.18)); border:1.5px solid rgba(138,173,204,.4); border-radius:13px; padding:11px 14px; margin-bottom:12px; display:flex; align-items:center; gap:10px; font-size:.82rem; }
+.notification-banner .icon { font-size:1.35rem; flex-shrink:0; }
+.loading { text-align:center; color:var(--text-muted); padding:24px; }
+.spinner { display:inline-block; width:26px; height:26px; border:3px solid var(--card-border); border-top-color:var(--primary); border-radius:50%; animation:spin .75s linear infinite; }
+@keyframes spin { to { transform:rotate(360deg); } }
+.tab-panel { display:none; }
+.tab-panel.active { display:block; }
+.gradient-text { background:linear-gradient(135deg,var(--primary),var(--secondary)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
+.toast { position:fixed; bottom:24px; left:50%; transform:translateX(-50%) translateY(120px); background:var(--card); border:1.5px solid var(--primary); border-radius:13px; padding:11px 22px; font-size:.84rem; z-index:1000; transition:transform .3s cubic-bezier(.34,1.56,.64,1); white-space:nowrap; box-shadow:0 8px 24px rgba(140,100,70,.2); }
+.toast.show { transform:translateX(-50%) translateY(0); }
+.empty-state { text-align:center; padding:34px 20px; color:var(--text-muted); }
+.empty-state .emoji { font-size:2.7rem; margin-bottom:10px; }
+::-webkit-scrollbar { width:4px; height:4px; }
+::-webkit-scrollbar-track { background:var(--bg); }
+::-webkit-scrollbar-thumb { background:var(--card-border); border-radius:2px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>✨ StyleWeather</h1>
+  <p id="headerDate">天氣穿搭智慧助手</p>
+</div>
+<nav class="nav">
+  <button class="nav-btn active" onclick="switchTab('today',this)"><span class="nav-icon">👗</span><span>今日穿搭</span></button>
+  <button class="nav-btn" onclick="switchTab('wardrobe',this)"><span class="nav-icon">👚</span><span>我的衣櫥</span></button>
+  <button class="nav-btn" onclick="switchTab('weekly',this)"><span class="nav-icon">📅</span><span>週計劃</span></button>
+  <button class="nav-btn" onclick="switchTab('history',this)"><span class="nav-icon">📖</span><span>穿搭歷史</span></button>
+</nav>
+
+<div class="main">
+
+  <!-- TODAY -->
+  <div id="tab-today" class="tab-panel active">
+    <div id="notificationBanner" class="notification-banner" style="display:none;">
+      <span class="icon">🔔</span><span id="notificationText"></span>
+    </div>
+
+    <div class="card">
+      <div class="card-title">🌤 今日天氣</div>
+      <div class="weather-search">
+        <input type="text" id="cityInput" placeholder="城市名稱（Taipei · Tokyo · Seoul…）" onkeydown="if(event.key==='Enter')fetchWeather()">
+        <button class="btn btn-primary" onclick="fetchWeather()">搜尋</button>
+      </div>
+      <div id="weatherDisplay">
+        <div class="loading" style="padding:12px;">
+          <div style="margin-bottom:10px;font-size:1.5rem;">🌍</div>
+          <div>輸入城市或使用定位</div>
+          <div style="display:flex;gap:8px;justify-content:center;margin-top:10px;flex-wrap:wrap;">
+            <button class="btn btn-primary btn-sm" onclick="getLocationWeather()">📍 我的位置</button>
+            <button onclick="loadDemoWeather()" style="background:none;border:1.5px solid var(--card-border);color:var(--text-muted);padding:6px 13px;border-radius:8px;cursor:pointer;font-size:.78rem;">🎮 示範天氣</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">🎯 今日場合</div>
+      <div class="occasion-grid">
+        <button class="occasion-btn active" onclick="setOccasion('casual',this)"><span class="occasion-icon">😊</span><span>日常</span></button>
+        <button class="occasion-btn" onclick="setOccasion('work',this)"><span class="occasion-icon">💼</span><span>上班</span></button>
+        <button class="occasion-btn" onclick="setOccasion('date',this)"><span class="occasion-icon">💕</span><span>約會</span></button>
+        <button class="occasion-btn" onclick="setOccasion('sports',this)"><span class="occasion-icon">🏃</span><span>運動</span></button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">💅 穿搭風格</div>
+      <div class="style-grid">
+        <button class="style-btn active" onclick="setStyle('casual',this)">☕ 休閒</button>
+        <button class="style-btn" onclick="setStyle('minimal',this)">⬜ 簡約</button>
+        <button class="style-btn" onclick="setStyle('cute',this)">🌸 可愛</button>
+        <button class="style-btn" onclick="setStyle('street',this)">🔥 街頭</button>
+        <button class="style-btn" onclick="setStyle('formal',this)">👔 正式</button>
+        <button class="style-btn" onclick="setStyle('sporty',this)">⚡ 運動</button>
+      </div>
+    </div>
+
+    <div class="card" id="outfitCard" style="display:none;">
+      <div class="card-title gradient-text">✨ 今日推薦穿搭</div>
+
+      <!-- Paper-doll character stage -->
+      <div class="char-stage">
+        <!-- Labels layer (behind face, in front of body) -->
+        <div class="char-labels" id="charLabels"></div>
+
+        <!-- Face (DiceBear CDN) -->
+        <div class="char-face-wrap">
+          <div class="face-loader" id="faceLoader">👤</div>
+          <img id="charFaceImg" alt="Character" style="opacity:0;"
+               onload="this.style.opacity='1';document.getElementById('faceLoader').style.display='none';"
+               onerror="this.style.display='none';">
+        </div>
+
+        <!-- Body SVG -->
+        <div class="char-body-wrap">
+          <svg id="charBodySvg" viewBox="0 0 300 310" xmlns="http://www.w3.org/2000/svg" style="overflow:visible;"></svg>
+        </div>
+      </div>
+
+      <div class="outfit-description" id="outfitDescription"></div>
+      <div class="outfit-tags" id="outfitTags"></div>
+      <button class="record-btn" onclick="recordOutfit()">📝 記錄今日穿搭</button>
+    </div>
+  </div>
+
+  <!-- WARDROBE -->
+  <div id="tab-wardrobe" class="tab-panel">
+    <div class="card">
+      <div class="card-title">👗 新增衣物</div>
+      <div class="category-tabs" id="addCategoryTabs">
+        <button class="category-tab active" data-cat="top">👕 上衣</button>
+        <button class="category-tab" data-cat="bottom">👖 下著</button>
+        <button class="category-tab" data-cat="outer">🧥 外套</button>
+        <button class="category-tab" data-cat="shoes">👟 鞋子</button>
+        <button class="category-tab" data-cat="acc">🎒 配件</button>
+      </div>
+      <label class="upload-zone">
+        <input type="file" id="clothesUpload" accept="image/*" multiple onchange="handleUpload(event)">
+        <div style="font-size:2rem;">📸</div>
+        <div style="margin-top:7px;font-weight:700;font-size:.88rem;">點擊上傳衣物照片</div>
+        <div style="font-size:.77rem;color:var(--text-muted);margin-top:3px;">JPG · PNG · WebP · 可多選</div>
+      </label>
+    </div>
+    <div class="card">
+      <div class="card-title">🗂 我的衣物 <span id="wardrobeCount" style="color:var(--primary-light);font-size:.9em;"></span></div>
+      <div class="category-tabs" id="viewCategoryTabs">
+        <button class="category-tab active" data-cat="all">全部</button>
+        <button class="category-tab" data-cat="top">上衣</button>
+        <button class="category-tab" data-cat="bottom">下著</button>
+        <button class="category-tab" data-cat="outer">外套</button>
+        <button class="category-tab" data-cat="shoes">鞋子</button>
+        <button class="category-tab" data-cat="acc">配件</button>
+      </div>
+      <div class="wardrobe-grid" id="wardrobeGrid"></div>
+    </div>
+  </div>
+
+  <!-- WEEKLY -->
+  <div id="tab-weekly" class="tab-panel">
+    <div class="card">
+      <div class="card-title">📅 七天天氣穿搭規劃</div>
+      <div id="weeklyForecast"><div class="loading"><div style="font-size:1.7rem;margin-bottom:10px;">🗓</div><div>請先在「今日穿搭」搜尋城市</div></div></div>
+    </div>
+  </div>
+
+  <!-- HISTORY -->
+  <div id="tab-history" class="tab-panel">
+    <div class="card">
+      <div class="card-title">📖 穿搭記錄 <span id="historyCount" style="color:var(--primary-light);font-size:.9em;"></span></div>
+      <div id="historyList"></div>
+    </div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+// ─── STATE ───────────────────────────────────────────────────────────────────
+const S = {
+  weather:null, forecast:null, occasion:'casual', style:'casual',
+  wardrobe:[], history:[], addCat:'top', viewCat:'all',
+};
+
+// ─── INIT ─────────────────────────────────────────────────────────────────────
+function init() {
+  try { S.wardrobe = JSON.parse(localStorage.getItem('sw_wardrobe')||'[]'); } catch(e){ S.wardrobe=[]; }
+  try { S.history  = JSON.parse(localStorage.getItem('sw_history')||'[]');  } catch(e){ S.history=[];  }
+  const now = new Date();
+  const days = ['星期日','星期一','星期二','星期三','星期四','星期五','星期六'];
+  document.getElementById('headerDate').textContent =
+    `${now.getFullYear()}年${now.getMonth()+1}月${now.getDate()}日 ${days[now.getDay()]}`;
+  setupCatTabs('addCategoryTabs', c => { S.addCat=c; });
+  setupCatTabs('viewCategoryTabs', c => { S.viewCat=c; renderWardrobe(); });
+  renderWardrobe(); renderHistory();
+  if ('Notification' in window) Notification.requestPermission();
+}
+
+// ─── TABS ─────────────────────────────────────────────────────────────────────
+function switchTab(tab, btn) {
+  document.querySelectorAll('.tab-panel').forEach(el=>el.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(el=>el.classList.remove('active'));
+  document.getElementById('tab-'+tab).classList.add('active');
+  btn.classList.add('active');
+  if (tab==='weekly') renderWeekly();
+  if (tab==='history') renderHistory();
+}
+
+// ─── WEATHER ──────────────────────────────────────────────────────────────────
+async function fetchWeather() {
+  const city = document.getElementById('cityInput').value.trim();
+  if (!city) { showToast('請輸入城市名稱'); return; }
+  await loadWeather(city);
+}
+async function getLocationWeather() {
+  if (!navigator.geolocation) { showToast('不支援定位'); return; }
+  showLoadingWeather();
+  navigator.geolocation.getCurrentPosition(
+    async p => await loadWeather(`${p.coords.latitude},${p.coords.longitude}`),
+    () => { showToast('無法取得位置'); showInitWx(); }
+  );
+}
+function showLoadingWeather() {
+  document.getElementById('weatherDisplay').innerHTML =
+    '<div class="loading"><div class="spinner"></div><div style="margin-top:10px;">載入天氣中…</div></div>';
+}
+function showInitWx() {
+  document.getElementById('weatherDisplay').innerHTML = `
+    <div class="loading" style="padding:12px;">
+      <div style="margin-bottom:10px;font-size:1.5rem;">🌍</div><div>輸入城市或使用定位</div>
+      <div style="display:flex;gap:8px;justify-content:center;margin-top:10px;flex-wrap:wrap;">
+        <button class="btn btn-primary btn-sm" onclick="getLocationWeather()">📍 我的位置</button>
+        <button onclick="loadDemoWeather()" style="background:none;border:1.5px solid var(--card-border);color:var(--text-muted);padding:6px 13px;border-radius:8px;cursor:pointer;font-size:.78rem;">🎮 示範天氣</button>
+      </div>
+    </div>`;
+}
+async function loadWeather(loc) {
+  showLoadingWeather();
+  try {
+    const res = await fetch(`https://wttr.in/${encodeURIComponent(loc)}?format=j1`, {signal:AbortSignal.timeout(8000)});
+    if (!res.ok) throw new Error();
+    const d = await res.json();
+    const c=d.current_condition[0], a=d.nearest_area[0];
+    S.weather = { temp:parseInt(c.temp_C), feelsLike:parseInt(c.FeelsLikeC), humidity:parseInt(c.humidity),
+      wind:parseInt(c.windspeedKmph), desc:c.weatherDesc[0].value, code:parseInt(c.weatherCode),
+      city:a.areaName[0].value+', '+a.country[0].value, uvIndex:parseInt(c.uvIndex||0), precip:parseFloat(c.precipMM) };
+    S.forecast = d.weather;
+    renderWx(); generateOutfit(); checkNotifications();
+    if (document.getElementById('tab-weekly').classList.contains('active')) renderWeekly();
+  } catch(e) { showToast('⚠️ 連線失敗，已載入示範天氣'); loadDemoWeather(loc); }
+}
+function loadDemoWeather(loc) {
+  const demos=[
+    {temp:14,feelsLike:11,humidity:78,wind:14,desc:'Partly cloudy',code:116,precip:0,uvIndex:3},
+    {temp:8,feelsLike:5,humidity:82,wind:18,desc:'Light rain',code:296,precip:1.8,uvIndex:1},
+    {temp:25,feelsLike:27,humidity:65,wind:9,desc:'Sunny',code:113,precip:0,uvIndex:7},
+    {temp:2,feelsLike:-2,humidity:55,wind:22,desc:'Cold',code:119,precip:0,uvIndex:1},
+    {temp:31,feelsLike:34,humidity:72,wind:7,desc:'Hot and sunny',code:113,precip:0,uvIndex:9},
+  ];
+  S.weather = {...demos[Math.floor(Math.random()*demos.length)],city:(typeof loc==='string'&&loc&&!loc.includes(','))?loc:'台北市, Taiwan'};
+  S.forecast = buildDemoForecast();
+  renderWx(); generateOutfit(); checkNotifications();
+  if (document.getElementById('tab-weekly').classList.contains('active')) renderWeekly();
+}
+function buildDemoForecast() {
+  return [{max:15,min:9,code:116,rain:20},{max:11,min:6,code:296,rain:70},{max:18,min:12,code:113,rain:5},
+    {max:13,min:7,code:119,rain:35},{max:22,min:15,code:116,rain:10},{max:16,min:10,code:302,rain:60},{max:24,min:16,code:113,rain:5}
+  ].map((p,i)=>({date:new Date(Date.now()+i*86400000).toISOString().split('T')[0],
+    maxtempC:String(p.max),mintempC:String(p.min),
+    hourly:[{weatherCode:String(p.code),weatherDesc:[{value:''}],chanceofrain:String(p.rain)}]}));
+}
+const WI = {113:'☀️',116:'⛅',119:'☁️',122:'☁️',176:'🌦️',185:'🌦️',248:'🌫️',260:'🌫️',293:'🌦️',296:'🌦️',302:'🌧️',305:'🌧️',308:'🌧️',311:'🌧️',314:'🌧️',317:'🌨️',320:'🌨️',323:'🌨️',326:'🌨️',329:'❄️',332:'❄️',335:'❄️',338:'❄️',386:'⛈️',389:'⛈️',392:'⛈️',395:'⛈️'};
+function wIcon(c){return WI[c]||(c>=200&&c<300?'⛈️':c>=300&&c<400?'🌧️':c>=600&&c<700?'❄️':'🌤️');}
+function tColor(t){return t<=5?'#5a8fc8':t<=15?'#5aac7a':t<=22?'#8aaa4a':t<=28?'#c8a84a':'#c87a5a';}
+function tPct(t){return Math.max(2,Math.min(98,((t+10)/50)*100));}
+function isRain(w){return w.precip>0||w.code===176||(w.code>=293&&w.code<=395)||w.desc.toLowerCase().includes('rain');}
+function renderWx() {
+  const w=S.weather, rain=isRain(w);
+  document.getElementById('weatherDisplay').innerHTML = `
+    <div class="weather-display">
+      <div class="weather-main">
+        <div class="weather-icon">${wIcon(w.code)}</div>
+        <div>
+          <div class="weather-city">📍 ${w.city}</div>
+          <div style="line-height:1"><span class="weather-temp" style="color:${tColor(w.temp)}">${w.temp}</span><span class="weather-unit">°C</span></div>
+          <div class="weather-desc">${w.desc}</div>
+        </div>
+      </div>
+      <div class="weather-details">
+        <div class="weather-detail-item">💧 濕度 ${w.humidity}%</div>
+        <div class="weather-detail-item">💨 ${w.wind} km/h</div>
+        <div class="weather-detail-item">🌡 體感 ${w.feelsLike}°C</div>
+        <div class="weather-detail-item">☀️ UV ${w.uvIndex}</div>
+      </div>
+    </div>
+    <div class="temp-bar"><div class="temp-indicator" style="left:${tPct(w.temp)}%"></div></div>
+    <div style="display:flex;justify-content:space-between;font-size:.67rem;color:var(--text-muted);"><span>❄️極冷</span><span>🌤舒適</span><span>🔥炎熱</span></div>
+    ${rain?'<div style="margin-top:9px;padding:7px 11px;background:rgba(138,173,204,.15);border:1px solid rgba(138,173,204,.4);border-radius:9px;font-size:.8rem;color:#3a6a8b;">☔ 今天有雨，記得帶傘！</div>':''}
+    ${w.humidity>85?'<div style="margin-top:6px;padding:7px 11px;background:rgba(122,184,122,.1);border:1px solid rgba(122,184,122,.28);border-radius:9px;font-size:.79rem;color:#3a6e3a;">💦 濕度偏高，選透氣材質</div>':''}`;
+}
+
+// ─── OUTFITS ──────────────────────────────────────────────────────────────────
+const OUTFITS = {
+  freezing:{casual:{top:'高領羊毛毛衣',outer:'羽絨大衣',bottom:'加絨長褲/厚褲襪',shoes:'保暖靴子',acc:'圍巾・毛帽・手套',desc:'🥶 極寒！洋蔥穿法，圍巾毛帽手套缺一不可。'},work:{top:'高領毛衣',outer:'長版羊毛大衣',bottom:'保暖西裝褲',shoes:'皮革靴子',acc:'質感圍巾・皮手套',desc:'💼 嚴寒上班，高領毛衣+長版大衣兼顧保暖與正式感。'},date:{top:'針織毛衣',outer:'質感大衣（駝色）',bottom:'加絨修身長裙',shoes:'高跟靴',acc:'毛絨圍巾・精緻耳環',desc:'💕 質感大衣最浪漫，駝色系展現溫柔氣質。'},sports:{top:'保暖運動內搭+厚長袖',outer:'防風防水夾克',bottom:'加絨運動長褲',shoes:'保暖運動鞋',acc:'運動帽・防寒手套',desc:'🏃 防風夾克必備！充分熱身後再開始。'}},
+  cold:{casual:{top:'長袖T+薄毛衣',outer:'輕羽絨/針織外套',bottom:'牛仔褲',shoes:'帆布鞋/低筒靴',acc:'輕薄圍巾',desc:'🧥 輕薄羽絨方便穿脫，洋蔥式應對室內外溫差。'},work:{top:'素色襯衫+針織背心',outer:'西裝外套/輕版大衣',bottom:'西裝褲/鉛筆裙',shoes:'低跟鞋/樂福鞋',acc:'輕薄圍巾',desc:'💼 針織背心疊穿既保暖又優雅。'},date:{top:'質感針織上衣',outer:'風衣外套',bottom:'A字裙+內搭褲',shoes:'踝靴',acc:'絲巾・精緻耳環',desc:'💕 風衣是這季最有氛圍的選擇！'},sports:{top:'排汗長袖運動衫',outer:'輕薄運動外套',bottom:'運動長褲',shoes:'跑步鞋',acc:'運動帽',desc:'🏃 涼爽微冷，薄外套運動後記得穿上。'}},
+  mild:{casual:{top:'薄長袖/條紋衫',outer:'牛仔外套（早晚用）',bottom:'牛仔褲',shoes:'帆布鞋/小白鞋',acc:'棒球帽',desc:'🌤 舒適天氣，薄外套白天可以綁在腰間。'},work:{top:'素色襯衫/薄針織上衣',outer:'輕薄西裝外套',bottom:'直筒褲/中長裙',shoes:'低跟鞋/牛津鞋',acc:'簡約手錶',desc:'💼 輕薄西裝外套最百搭，正式又不悶熱。'},date:{top:'碎花上衣/清新印花',outer:'薄款開衫',bottom:'傘裙/闊腿褲',shoes:'樂福鞋/小白鞋',acc:'精緻耳環・小包包',desc:'💕 最適合約會的天氣，輕鬆展現個人風格！'},sports:{top:'排汗T恤',outer:'薄運動外套（可綁腰）',bottom:'運動短褲/緊身褲',shoes:'運動鞋',acc:'頭帶',desc:'🏃 涼爽天氣超適合運動！'}},
+  warm:{casual:{top:'純棉T恤/背心',outer:'',bottom:'休閒短褲/薄長褲',shoes:'帆布鞋/涼鞋',acc:'太陽眼鏡・防曬帽',desc:'☀️ 溫暖舒適，記得防曬！'},work:{top:'透氣棉質襯衫',outer:'薄外套（辦公室用）',bottom:'輕薄長褲/膝上裙',shoes:'透氣皮鞋',acc:'防曬噴霧',desc:'💼 辦公室冷氣強，準備一件薄外套調節溫度。'},date:{top:'清新印花上衣/絲質衫',outer:'',bottom:'飄逸長裙/短褲',shoes:'涼鞋/草編鞋',acc:'草帽・耳環',desc:'💕 暖陽天約會，輕盈飄逸展現清新氣質！'},sports:{top:'運動背心/排汗T',outer:'',bottom:'運動短褲',shoes:'輕量運動鞋',acc:'棒球帽・補水！',desc:'🏃 溫暖天氣適合運動，多補充水分。'}},
+  hot:{casual:{top:'無袖背心/透氣T',outer:'',bottom:'短褲/輕薄短裙',shoes:'涼鞋/人字拖',acc:'太陽眼鏡・防曬帽・防曬乳',desc:'🔥 超熱！選最輕薄透氣的單品，出門前一定塗防曬乳！'},work:{top:'輕薄透氣襯衫',outer:'薄外套（辦公室必備）',bottom:'輕薄長褲/透氣裙',shoes:'透氣涼鞋',acc:'小扇子・防曬噴霧',desc:'💼 酷熱天辦公室冷氣強，一定準備薄外套！'},date:{top:'清涼吊帶上衣',outer:'',bottom:'輕薄短裙/薄料長裙',shoes:'平底涼鞋',acc:'防曬帽・精緻耳環',desc:'💕 夏日約會選清涼造型，飄逸布料涼快又好看！'},sports:{top:'運動背心',outer:'',bottom:'運動短褲',shoes:'輕量運動鞋',acc:'運動帽・大量補水！',desc:'🏃 ⚠️ 高溫天氣建議清晨或傍晚運動，大量補水！'}}
+};
+function outfitByTemp(t){return t<=5?OUTFITS.freezing:t<=12?OUTFITS.cold:t<=20?OUTFITS.mild:t<=28?OUTFITS.warm:OUTFITS.hot;}
+
+// ─── DICEBEAR character face ──────────────────────────────────────────────────
+// DiceBear "lorelei" — professional illustrated female avatar
+// URL is loaded by the USER'S BROWSER, not by Claude's network
+const FACE_SEEDS = {
+  // style → seed string (DiceBear is deterministic by seed)
+  casual:  'casual-weather-style',
+  minimal: 'minimal-chic-vibes',
+  cute:    'kawaii-fashion-love',
+  street:  'urban-street-cool',
+  formal:  'elegant-professional',
+  sporty:  'active-sporty-fit',
+};
+const FACE_COLORS = {
+  // occasion → background accent (not used in URL but for reference)
+  casual:'b6e3f4', work:'c0aede', date:'ffd1dc', sports:'d1f4e0',
+};
+
+function updateFace(style, occasion) {
+  const seed = FACE_SEEDS[style] || FACE_SEEDS.casual;
+  // Lorelei supports: seed, backgroundColor, scale, radius
+  // We also pick hair/eye color via seed variation
+  const url = `https://api.dicebear.com/9.x/lorelei/svg?seed=${encodeURIComponent(seed)}&backgroundColor=transparent&scale=90`;
+  const img = document.getElementById('charFaceImg');
+  const loader = document.getElementById('faceLoader');
+  img.style.opacity = '0';
+  loader.style.display = 'flex';
+  img.src = url;
+}
+
+// ─── GENERATE OUTFIT ──────────────────────────────────────────────────────────
+function generateOutfit() {
+  if (!S.weather) return;
+  const w=S.weather, lvl=outfitByTemp(w.temp), rain=isRain(w);
+  const outfit=lvl[S.occasion]||lvl.casual;
+  const styleNotes={minimal:'選單色或雙色搭配，線條俐落更顯氣質。',cute:'加入碎花、蝴蝶結等可愛元素。',street:'大Logo、工裝讓街頭感更強烈。',formal:'剪裁俐落是重點，避免休閒元素。',sporty:'加入運動品牌，鮮明配色更活潑。',casual:''};
+  let desc = outfit.desc;
+  if(rain) desc+=' ☔ 外套選防潑水材質，記得帶傘！';
+  if(w.humidity>80) desc+=' 💦 濕度偏高，選透氣排汗布料。';
+  if(w.wind>25) desc+=' 💨 今天風大，注意防風。';
+  if(styleNotes[S.style]) desc+=' '+styleNotes[S.style];
+
+  document.getElementById('outfitCard').style.display='block';
+  document.getElementById('outfitDescription').textContent=desc;
+  const noOuter=!outfit.outer||outfit.outer.trim()==='';
+  document.getElementById('outfitTags').innerHTML=[
+    outfit.top&&`<span class="outfit-tag tag-top">👕 ${outfit.top}</span>`,
+    !noOuter&&`<span class="outfit-tag tag-outer">🧥 ${outfit.outer}</span>`,
+    outfit.bottom&&`<span class="outfit-tag tag-bottom">👖 ${outfit.bottom}</span>`,
+    outfit.shoes&&`<span class="outfit-tag tag-shoes">👟 ${outfit.shoes}</span>`,
+    outfit.acc&&`<span class="outfit-tag tag-acc">🎒 ${outfit.acc}</span>`,
+    rain&&`<span class="outfit-tag tag-acc">☂️ 雨傘（必備）</span>`,
+  ].filter(Boolean).join('');
+
+  // Update DiceBear face
+  updateFace(S.style, S.occasion);
+  // Draw body
+  drawBody(w.temp, rain, S.occasion, S.style, outfit);
+  // Render labels
+  renderCharLabels(outfit, rain, w.temp);
+}
+
+// ─── BODY SVG (from shoulders/chest down) ────────────────────────────────────
+function drawBody(temp, rain, occasion, style, outfit) {
+  const svg = document.getElementById('charBodySvg');
+  const lvl = temp<=5?'freezing':temp<=12?'cold':temp<=20?'mild':temp<=28?'warm':'hot';
+  const skin='#FDDBB4', skinD='#E8B882';
+  const isDate=occasion==='date', isSports=occasion==='sports', isWork=occasion==='work';
+  const isHot=lvl==='hot'||lvl==='warm', isCold=lvl==='freezing'||lvl==='cold';
+
+  // Shirt/top color
+  const topC=isWork?'#e8eaf0':isDate?'#fce4ec':isSports?'#e3f2fd':'#f5f0e8';
+  // Knit / outer color
+  const knitC=isWork?'#7b8b9b':isDate?'#d4a8b8':isSports?'#4a7aaa':lvl==='freezing'?'#8b7060':'#c4a882';
+  const outerC=isWork?'#4a5568':lvl==='freezing'?'#5a4a3a':'#7b8b6b';
+  const skirtC=isDate?'#fce4ec':isSports?'#1e3a5a':'#f5f2ee';
+  const pantsC=isWork?'#2d3748':isSports?'#1e3a5a':'#4a5a6a';
+  const bootsC=isCold||lvl==='freezing'?'#6b4a2a':isHot?'#c4a882':'#8b6b4a';
+
+  // viewBox is "0 0 300 310"
+  // Arms start at top (y=0) representing shoulder/chest level from DiceBear
+  // Character center x=150
+
+  svg.innerHTML = `
+    <!-- Decorative elements -->
+    ${(isDate||style==='cute')?`<text x="55" y="35" font-size="13" fill="#f4aaaa" opacity=".65">♥</text><text x="240" y="25" font-size="10" fill="#f4aaaa" opacity=".55">♥</text>`:''}
+
+    <!-- Ground shadow -->
+    <ellipse cx="150" cy="304" rx="44" ry="6" fill="rgba(140,100,70,.09)"/>
+
+    <!-- SHOES -->
+    ${isCold||lvl==='freezing'?`
+      <path d="M114 260 Q107 257 102 268 Q101 279 112 281 L133 281 L133 260 Z" fill="${bootsC}"/>
+      <path d="M186 260 Q193 257 198 268 Q199 279 188 281 L167 281 L167 260 Z" fill="${bootsC}"/>
+      <rect x="99" y="275" width="36" height="8" rx="3.5" fill="#4a2c10"/>
+      <rect x="165" y="275" width="36" height="8" rx="3.5" fill="#4a2c10"/>
+    `:isHot?`
+      <path d="M109 263 Q124 258 135 265 L135 276 Q122 280 109 273 Z" fill="${bootsC}" opacity=".82"/>
+      <path d="M165 263 Q180 258 191 265 L191 276 Q178 280 165 273 Z" fill="${bootsC}" opacity=".82"/>
+      <line x1="116" y1="263" x2="121" y2="271" stroke="#a07848" stroke-width="2.2" stroke-linecap="round"/>
+      <line x1="172" y1="263" x2="177" y2="271" stroke="#a07848" stroke-width="2.2" stroke-linecap="round"/>
+    `:isSports?`
+      <path d="M106 261 Q122 256 135 263 L135 276 Q120 281 106 274 Z" fill="#f0ede8"/>
+      <path d="M165 261 Q181 256 194 263 L194 276 Q179 281 165 274 Z" fill="#f0ede8"/>
+      <path d="M113 261 Q122 270 130 268" stroke="${knitC}" stroke-width="2" fill="none" opacity=".6"/>
+      <path d="M170 261 Q179 270 187 268" stroke="${knitC}" stroke-width="2" fill="none" opacity=".6"/>
+    `:`
+      <path d="M105 262 Q122 256 134 264 L134 276 Q119 282 105 274 Z" fill="${bootsC}"/>
+      <path d="M166 262 Q183 256 195 264 L195 276 Q180 282 166 274 Z" fill="${bootsC}"/>
+      <ellipse cx="113" cy="262" rx="5" ry="3" fill="#8b6a4a" opacity=".38"/>
+      <ellipse cx="175" cy="262" rx="5" ry="3" fill="#8b6a4a" opacity=".38"/>
+    `}
+
+    <!-- LEGS -->
+    ${isHot&&!isWork?`
+      <rect x="113" y="210" width="20" height="52" rx="8" fill="${skin}"/>
+      <rect x="167" y="210" width="20" height="52" rx="8" fill="${skin}"/>
+    `:isSports?`
+      <rect x="112" y="206" width="22" height="57" rx="8" fill="${pantsC}"/>
+      <rect x="166" y="206" width="22" height="57" rx="8" fill="${pantsC}"/>
+    `:isCold&&isDate?`
+      <rect x="113" y="213" width="20" height="50" rx="8" fill="#f0dde8"/>
+      <rect x="167" y="213" width="20" height="50" rx="8" fill="#f0dde8"/>
+    `:`
+      <rect x="114" y="215" width="19" height="48" rx="8" fill="${isDate?skin:'#e8e4e0'}"/>
+      <rect x="167" y="215" width="19" height="48" rx="8" fill="${isDate?skin:'#e8e4e0'}"/>
+      ${!isDate?`<rect x="112" y="244" width="23" height="20" rx="6" fill="white"/><rect x="165" y="244" width="23" height="20" rx="6" fill="white"/>`:``}
+    `}
+
+    <!-- SKIRT / BOTTOM -->
+    ${isSports?`
+      <path d="M104 112 L106 210 L140 210 L150 165 L160 210 L194 210 L196 112 Z" fill="${pantsC}"/>
+    `:isWork&&isCold?`
+      <path d="M104 112 L106 265 L150 265 L150 112 Z" fill="${pantsC}"/>
+      <path d="M196 112 L194 265 L150 265 L150 112 Z" fill="${pantsC}"/>
+    `:isDate?`
+      <path d="M100 112 Q93 185 90 260 L210 260 Q207 185 200 112 Z" fill="${skirtC}"/>
+      ${[120,135,150,165,180].map(x=>`<line x1="${x}" y1="116" x2="${x+(x<150?-4:x===150?0:4)}" y2="258" stroke="#e8d0e8" stroke-width="1" opacity=".6"/>`).join('')}
+    `:isHot?`
+      <path d="M108 112 Q104 168 102 208 L198 208 Q196 168 192 112 Z" fill="${skirtC}"/>
+    `:`
+      <path d="M102 112 Q95 190 93 262 L207 262 Q205 190 198 112 Z" fill="${skirtC}"/>
+      <rect x="102" y="108" width="96" height="10" rx="4" fill="${skirtC==='#f5f2ee'?'#e8e4de':'#d4c0d0'}"/>
+      ${[118,132,150,168,182].map(x=>`<line x1="${x}" y1="118" x2="${x+(x<150?-4:x===150?0:4)}" y2="260" stroke="${skirtC==='#f5f2ee'?'#e8e4dc':'#ddd0dc'}" stroke-width="1" opacity=".55"/>`).join('')}
+    `}
+
+    <!-- BODY / TOP -->
+    ${lvl==='freezing'?`
+      <path d="M88 52 L84 118 L216 118 L212 52 Q182 37 150 34 Q118 37 88 52 Z" fill="${outerC}"/>
+      <path d="M124 52 Q150 70 176 52 L172 38 Q150 52 128 38 Z" fill="${topC}" opacity=".9"/>
+      <line x1="150" y1="52" x2="150" y2="118" stroke="${outerC==='#5a4a3a'?'#6b5b4b':'#4a3a2a'}" stroke-width="2"/>
+      ${[68,84,100].map(y=>`<circle cx="150" cy="${y}" r="3.5" fill="#a89888"/>`).join('')}
+    `:isCold?`
+      <path d="M93 54 L89 118 L211 118 L207 54 Q181 40 150 37 Q119 40 93 54 Z" fill="${topC}"/>
+      <path d="M97 60 L93 118 L207 118 L203 60 Q179 46 150 43 Q121 46 97 60 Z" fill="${knitC}" opacity=".88"/>
+      <path d="M128 60 Q150 78 172 60" fill="${topC}"/>
+      <path d="M130 54 Q150 64 170 54 L166 42 Q150 50 134 42 Z" fill="${topC}"/>
+    `:isHot?`
+      <path d="M118 42 L114 118 L186 118 L182 42 L170 32 L130 32 Z" fill="${knitC}"/>
+      <rect x="130" y="32" width="9" height="16" rx="4.5" fill="${knitC}"/>
+      <rect x="161" y="32" width="9" height="16" rx="4.5" fill="${knitC}"/>
+    `:`
+      <path d="M93 52 L89 118 L211 118 L207 52 Q181 39 150 36 Q119 39 93 52 Z" fill="${topC}"/>
+      ${isWork?`
+        <line x1="150" y1="52" x2="150" y2="118" stroke="#e8e0d8" stroke-width="1.5" stroke-dasharray="4,3"/>
+        ${[65,82,99].map(y=>`<circle cx="150" cy="${y}" r="2.5" fill="#d8d0c8"/>`).join('')}
+        <path d="M130 52 Q150 66 170 52 L166 40 Q150 48 134 40 Z" fill="white"/>
+      `:isDate?`
+        <path d="M130 52 Q150 65 170 52 L166 42 Q150 50 134 42 Z" fill="${knitC}" opacity=".35"/>
+      `:`
+        <path d="M130 52 Q150 63 170 52 Q168 43 150 40 Q132 43 130 52 Z" fill="${topC}"/>
+        <path d="M97 62 L93 118 L207 118 L203 62 Q179 48 150 45 Q121 48 97 62 Z" fill="${knitC}" opacity=".86"/>
+        <path d="M130 62 Q150 80 170 62" fill="${topC}"/>
+      `}
+    `}
+
+    <!-- ARMS -->
+    ${lvl==='freezing'?`
+      <path d="M88 56 Q68 72 72 118 Q80 126 90 118 Q87 84 94 68 Z" fill="${outerC}"/>
+      <path d="M212 56 Q232 72 228 118 Q220 126 210 118 Q213 84 206 68 Z" fill="${outerC}"/>
+      <ellipse cx="76" cy="122" rx="11" ry="8" fill="#7b6b5b"/>
+      <ellipse cx="224" cy="122" rx="11" ry="8" fill="#7b6b5b"/>
+    `:isCold?`
+      <path d="M93 57 Q72 73 76 116 Q84 124 93 116 Q90 84 98 68 Z" fill="${topC}"/>
+      <path d="M207 57 Q228 73 224 116 Q216 124 207 116 Q210 84 202 68 Z" fill="${topC}"/>
+      <path d="M93 58 Q80 68 82 90 Q87 94 94 90 Q92 76 98 66 Z" fill="${knitC}" opacity=".87"/>
+      <path d="M207 58 Q220 68 218 90 Q213 94 206 90 Q208 76 202 66 Z" fill="${knitC}" opacity=".87"/>
+      <ellipse cx="78" cy="119" rx="10" ry="8" fill="${skin}"/>
+      <ellipse cx="222" cy="119" rx="10" ry="8" fill="${skin}"/>
+    `:isHot?`
+      <path d="M118 46 Q97 62 100 112 Q108 120 118 112 Q114 78 122 60 Z" fill="${skin}"/>
+      <path d="M182 46 Q203 62 200 112 Q192 120 182 112 Q186 78 178 60 Z" fill="${skin}"/>
+      <ellipse cx="103" cy="115" rx="10" ry="7" fill="${skin}"/>
+      <ellipse cx="197" cy="115" rx="10" ry="7" fill="${skin}"/>
+    `:`
+      <path d="M93 55 Q72 70 76 115 Q84 123 93 115 Q90 82 98 66 Z" fill="${(lvl==='mild'||true)?topC:knitC}"/>
+      <path d="M207 55 Q228 70 224 115 Q216 123 207 115 Q210 82 202 66 Z" fill="${(lvl==='mild'||true)?topC:knitC}"/>
+      ${!isHot?`
+        <path d="M93 56 Q78 66 80 92 Q86 97 94 92 Q91 76 98 64 Z" fill="${knitC}" opacity="${lvl==='mild'?0.85:0.88}"/>
+        <path d="M207 56 Q222 66 220 92 Q214 97 206 92 Q209 76 202 64 Z" fill="${knitC}" opacity="${lvl==='mild'?0.85:0.88}"/>
+      `:''}
+      <ellipse cx="78" cy="118" rx="10" ry="7" fill="${skin}"/>
+      <ellipse cx="222" cy="118" rx="10" ry="7" fill="${skin}"/>
+    `}
+
+    <!-- Neck connector (smooth transition from DiceBear head) -->
+    <path d="M138 0 Q138 18 142 26 L158 26 Q162 18 162 0 Z" fill="${skin}" opacity=".7"/>
+
+    <!-- Bag / accessory -->
+    ${!isSports?(isWork?`
+      <rect x="38" y="78" width="34" height="28" rx="4" fill="#5a4a3a"/>
+      <path d="M44 78 L44 72 Q44 69 50 69 L60 69 Q66 69 66 72 L66 78" stroke="#5a4a3a" stroke-width="2.2" fill="none"/>
+      <line x1="38" y1="92" x2="72" y2="92" stroke="#6b5a4a" stroke-width="1.5"/>
+      <line x1="78" y1="116" x2="72" y2="95" stroke="#8b7860" stroke-width="1.5"/>
+    `:isDate?`
+      <circle cx="46" cy="100" r="21" fill="#c4a882"/>
+      <circle cx="46" cy="100" r="21" fill="none" stroke="#b89870" stroke-width="1.5"/>
+      <path d="M33 87 Q33 76 46 76 Q59 76 59 87" stroke="#8b6a4a" stroke-width="2" fill="none" stroke-linecap="round"/>
+      <circle cx="46" cy="100" r="6" fill="#a8886a" opacity=".45"/>
+      <line x1="78" y1="116" x2="65" y2="103" stroke="#c4a882" stroke-width="1.5" stroke-dasharray="3,2"/>
+    `:`
+      <rect x="40" y="86" width="30" height="24" rx="5" fill="#8b6b4a"/>
+      <rect x="40" y="86" width="30" height="24" rx="5" fill="none" stroke="#7b5b3a" stroke-width="1.2"/>
+      <line x1="40" y1="98" x2="70" y2="98" stroke="#7b5b3a" stroke-width="1"/>
+      <line x1="78" y1="116" x2="69" y2="102" stroke="#a07848" stroke-width="1.5"/>
+    `  ):''}
+
+    <!-- Scarf (cold) -->
+    ${lvl==='cold'?`<path d="M100 28 Q150 38 200 28 L200 42 Q150 52 100 42 Z" fill="${isDate?'#d4a8b8':'#8aadcc'}" opacity=".88"/>`:``}
+
+    <!-- Heavy scarf+hat (freezing) -->
+    ${lvl==='freezing'?`
+      <path d="M93 28 Q150 40 207 28 L207 46 Q150 58 93 46 Z" fill="#d45858"/>
+      <path d="M108 40 Q106 58 112 66 Q120 72 136 70 Q142 64 142 44" fill="#d45858"/>
+    `:``}
+
+    <!-- Umbrella -->
+    ${rain?`
+      <line x1="228" y1="55" x2="242" y2="208" stroke="#6b5a4a" stroke-width="3.5" stroke-linecap="round"/>
+      <path d="M242 208 Q242 220 232 220" stroke="#6b5a4a" stroke-width="3.5" fill="none" stroke-linecap="round"/>
+      <path d="M202 55 Q222 22 256 55 Q246 34 222 29 Q198 34 202 55 Z" fill="#8aadcc"/>
+      <path d="M202 55 Q222 29 256 55" stroke="#6a8aac" stroke-width="1.5" fill="none"/>
+      ${[214,224,234,246].map(x=>`<line x1="${x}" y1="55" x2="${222+(x-222)*.3}" y2="30" stroke="#6a8aac" stroke-width="1" opacity=".45"/>`).join('')}
+      <!-- Rain drops left side -->
+      ${[[28,60],[18,100],[35,145],[22,190]].map(([x,y])=>`<line x1="${x}" y1="${y}" x2="${x-3}" y2="${y+26}" stroke="#8aadcc" stroke-width="1.8" opacity=".45" stroke-linecap="round"/>`).join('')}
+    `:``}
+
+    ${isSports?`<path d="M100 6 Q150 -6 200 6" stroke="white" stroke-width="6" fill="none" stroke-linecap="round" opacity=".88"/>`:``}
+  `;
+}
+
+// ─── LABELS around character ──────────────────────────────────────────────────
+function renderCharLabels(outfit, rain, temp) {
+  const lvl = temp<=5?'freezing':temp<=12?'cold':temp<=20?'mild':temp<=28?'warm':'hot';
+  const noOuter = !outfit.outer||outfit.outer.trim()==='';
+  const labels = document.getElementById('charLabels');
+
+  // We position labels relative to the .char-stage container (300px wide)
+  // Face wrap is 150px at center (top:0, left:75px)
+  // Body wrap starts at top:120px (face 150px - 30px overlap)
+  // Total stage height ≈ 120 + body SVG rendered height
+
+  const chips = [
+    // [text, top%, left%, side]  side: 'left'|'right'
+    outfit.top   && [outfit.top.split('/')[0].trim(),   '34%', null,  'left'],
+    !noOuter     && [outfit.outer.split('/')[0].trim(), '48%', null,  'left'],
+    outfit.bottom&& [outfit.bottom.split('/')[0].trim(),'64%', null,  'left'],
+    outfit.shoes && [outfit.shoes.split('/')[0].trim(), '84%', null,  'left'],
+    outfit.acc   && [outfit.acc.split('・')[0].trim(),  '36%', null,  'right'],
+    rain         && ['雨傘（必備）',                    '52%', null,  'right'],
+    (lvl==='freezing')&&['毛帽',                        '12%', null,  'right'],
+  ].filter(Boolean);
+
+  labels.innerHTML = chips.map(([text, top, _, side]) => {
+    const isLeft = side==='left';
+    return `<div class="char-label" style="top:${top};${isLeft?'left:2px':'right:2px'};">${text}</div>`;
+  }).join('');
+}
+
+// ─── OCCASION & STYLE ─────────────────────────────────────────────────────────
+function setOccasion(occ, btn) {
+  S.occasion=occ;
+  document.querySelectorAll('.occasion-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  if(S.weather) generateOutfit();
+}
+function setStyle(sty, btn) {
+  S.style=sty;
+  document.querySelectorAll('.style-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  if(S.weather) generateOutfit();
+}
+
+// ─── WARDROBE ─────────────────────────────────────────────────────────────────
+function setupCatTabs(id, cb) {
+  document.getElementById(id).querySelectorAll('.category-tab').forEach(tab=>{
+    tab.addEventListener('click',()=>{
+      document.getElementById(id).querySelectorAll('.category-tab').forEach(t=>t.classList.remove('active'));
+      tab.classList.add('active'); cb(tab.dataset.cat);
+    });
+  });
+}
+function handleUpload(e) {
+  const files=Array.from(e.target.files); if(!files.length) return;
+  let done=0;
+  files.forEach(f=>{
+    const r=new FileReader();
+    r.onload=ev=>{
+      S.wardrobe.push({id:Date.now()+Math.random(),name:f.name.replace(/\.[^.]+$/,''),category:S.addCat,image:ev.target.result,at:new Date().toISOString()});
+      if(++done===files.length){saveWardrobe();renderWardrobe();showToast(`✅ 已加入 ${done} 件衣物`);}
+    };
+    r.readAsDataURL(f);
+  });
+  e.target.value='';
+}
+function saveWardrobe(){try{localStorage.setItem('sw_wardrobe',JSON.stringify(S.wardrobe));}catch(e){showToast('⚠️ 儲存空間不足');}}
+function renderWardrobe(){
+  const filtered=S.viewCat==='all'?S.wardrobe:S.wardrobe.filter(i=>i.category===S.viewCat);
+  const catN={all:'衣物',top:'上衣',bottom:'下著',outer:'外套',shoes:'鞋子',acc:'配件'};
+  const cEl=document.getElementById('wardrobeCount'); if(cEl) cEl.textContent=`(${S.wardrobe.length})`;
+  const grid=document.getElementById('wardrobeGrid');
+  if(!filtered.length){grid.innerHTML=`<div class="empty-state" style="grid-column:1/-1;"><div class="emoji">🪞</div><div>沒有${catN[S.viewCat]}</div><div style="font-size:.77rem;margin-top:4px;">快去上傳衣物吧！</div></div>`;return;}
+  grid.innerHTML=filtered.map(item=>`<div class="wardrobe-item"><img src="${item.image}" alt="${item.name}" loading="lazy"><div class="item-label">${item.name}</div><button class="item-delete" onclick="deleteItem(event,'${item.id}')">✕</button></div>`).join('');
+}
+function deleteItem(e,id){e.stopPropagation();S.wardrobe=S.wardrobe.filter(i=>String(i.id)!==String(id));saveWardrobe();renderWardrobe();showToast('已從衣櫥移除');}
+
+// ─── WEEKLY ───────────────────────────────────────────────────────────────────
+const dayNm=['週日','週一','週二','週三','週四','週五','週六'];
+function renderWeekly(){
+  const el=document.getElementById('weeklyForecast');
+  if(!S.forecast){el.innerHTML='<div class="loading">🌤 請先搜尋城市</div>';return;}
+  el.innerHTML=S.forecast.slice(0,7).map((day,i)=>{
+    const dt=new Date(day.date), label=i===0?'今天':i===1?'明天':dayNm[dt.getDay()];
+    const max=parseInt(day.maxtempC),min=parseInt(day.mintempC),avg=Math.round((max+min)/2);
+    const h=day.hourly[Math.floor(day.hourly.length/2)]||day.hourly[0];
+    const code=parseInt(h.weatherCode||'116'), rainPct=parseInt(h.chanceofrain||'0');
+    const outfit=(outfitByTemp(avg)[S.occasion]||outfitByTemp(avg).casual);
+    return `<div class="week-day-card">
+      <div style="font-size:1.8rem;">${wIcon(code)}</div>
+      <div class="week-day-info">
+        <div class="week-day-name">${label} · ${dt.getMonth()+1}/${dt.getDate()}</div>
+        <div class="week-day-weather"><span style="color:${tColor(max)}">${max}°</span><span style="color:var(--text-muted)"> / ${min}°</span>${rainPct>30?` · ☔ ${rainPct}%`:''}</div>
+        <div class="week-day-outfit">👕 ${outfit.top}${(!outfit.outer||outfit.outer.trim()==='')?'':' · 🧥 '+outfit.outer}${rainPct>30?' · ☂️ 帶傘':''}</div>
+      </div>
+      <div style="font-size:1.05rem;font-weight:800;color:${tColor(max)}">${max}°</div>
+    </div>`;
+  }).join('');
+}
+
+// ─── HISTORY ──────────────────────────────────────────────────────────────────
+function recordOutfit(){
+  if(!S.weather){showToast('請先搜尋天氣');return;}
+  const w=S.weather, outfit=outfitByTemp(w.temp)[S.occasion]||outfitByTemp(w.temp).casual;
+  const now=new Date(), today=now.toDateString();
+  const record={id:Date.now(),date:now.toISOString(),weather:{temp:w.temp,desc:w.desc,city:w.city,code:w.code},outfit,occasion:S.occasion,style:S.style};
+  const idx=S.history.findIndex(h=>new Date(h.date).toDateString()===today);
+  if(idx>=0){S.history[idx]=record;showToast('✅ 已更新今日穿搭記錄');}
+  else{S.history.unshift(record);showToast('✅ 穿搭已記錄！');}
+  S.history=S.history.slice(0,30);
+  localStorage.setItem('sw_history',JSON.stringify(S.history));
+  renderHistory();
+}
+function renderHistory(){
+  const el=document.getElementById('historyList');
+  const cEl=document.getElementById('historyCount'); if(cEl) cEl.textContent=`(${S.history.length})`;
+  if(!S.history.length){el.innerHTML='<div class="empty-state"><div class="emoji">📝</div><div>還沒有穿搭記錄</div></div>';return;}
+  const occLbl={casual:'日常',work:'上班',date:'約會',sports:'運動'};
+  el.innerHTML=S.history.map(r=>{
+    const d=new Date(r.date);
+    return `<div class="history-item">
+      <div class="history-date"><div class="day">${d.getDate()}</div><div>${d.getMonth()+1}月</div><div style="font-size:.72rem">${dayNm[d.getDay()]}</div></div>
+      <div style="flex:1;">
+        <div style="font-weight:700;margin-bottom:3px;">${wIcon(r.weather?.code||116)} ${r.weather?.temp||'--'}°C · ${r.weather?.city||''}</div>
+        <div style="font-size:.77rem;color:var(--text-muted);">場合：${occLbl[r.occasion]||'日常'} · 風格：${r.style}</div>
+        <div style="font-size:.81rem;margin-top:4px;">👕 ${r.outfit?.top||'-'}</div>
+        ${r.outfit?.outer&&r.outfit.outer.trim()?`<div style="font-size:.81rem;">🧥 ${r.outfit.outer}</div>`:''}
+      </div>
+      <button onclick="deleteHistory(${r.id})" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:1rem;padding:4px;align-self:flex-start;">✕</button>
+    </div>`;
+  }).join('');
+}
+function deleteHistory(id){S.history=S.history.filter(h=>h.id!==id);localStorage.setItem('sw_history',JSON.stringify(S.history));renderHistory();showToast('已刪除記錄');}
+
+// ─── NOTIFICATIONS ────────────────────────────────────────────────────────────
+function checkNotifications(){
+  if(!S.weather) return;
+  const w=S.weather, rain=isRain(w);
+  let msg='';
+  if(rain) msg=`☔ ${w.city} 今天有雨，記得帶傘！`;
+  else if(w.temp<=5) msg=`🥶 氣溫只有 ${w.temp}°C！穿厚外套、圍巾手套必備。`;
+  else if(w.temp>=32) msg=`🔥 今天 ${w.temp}°C 超熱！記得防曬補水。`;
+  else if(w.humidity>85) msg=`💦 濕度高達 ${w.humidity}%，選透氣吸濕材質。`;
+  const banner=document.getElementById('notificationBanner');
+  if(msg){
+    document.getElementById('notificationText').textContent=msg;
+    banner.style.display='flex';
+    if('Notification' in window&&Notification.permission==='granted'){try{new Notification('StyleWeather 👗',{body:msg});}catch(e){}}
+  } else banner.style.display='none';
+}
+
+// ─── TOAST ────────────────────────────────────────────────────────────────────
+let _tt;
+function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');clearTimeout(_tt);_tt=setTimeout(()=>t.classList.remove('show'),2800);}
+
+init();
+</script>
+</body>
+</html>
