@@ -1,0 +1,281 @@
+import React, { useMemo, useState } from "react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { motion } from "framer-motion";
+import { Sparkles, Shirt, Gem, Footprints, Briefcase, Heart, Dumbbell, Sun, Wand2, Handbag, Scissors } from "lucide-react";
+
+const styles = {
+  office: {
+    label: "上班",
+    icon: Briefcase,
+    mood: "知性、清新、可信賴",
+    title: "都會輕職場穿搭",
+    heroPalette: ["奶油黃", "白色", "卡士達奶油", "淺駝色"],
+    headline: "抗 UV 圓領開襟外套，選擇卡士達奶油色，打造亮麗清新的裝扮",
+    story:
+      "以柔和亮色外套作為視覺焦點，內搭簡潔白色上衣，再搭配高腰綁帶中長裙，完成溫柔又有精神的職場造型。",
+    hairstyle: ["低馬尾", "鬆感側分", "耳後收髮"],
+    makeup: ["輕透底妝", "自然棕眉", "蜜桃奶茶唇", "柔焦腮紅"],
+    clothing: ["圓領針織開襟外套", "素色無袖上衣", "高腰綁帶中長裙"],
+    accessories: ["細鍊長項鍊", "小耳釘", "極簡手環"],
+    bag: ["編織托特包", "米杏色肩背包"],
+    shoes: ["條紋楔形涼鞋", "裸色低跟鞋"],
+  },
+  casual: {
+    label: "休閒",
+    icon: Sun,
+    mood: "輕鬆、舒服、清爽",
+    title: "日常清新休閒穿搭",
+    heroPalette: ["檸檬黃", "白色", "淺卡其", "丹寧藍"],
+    headline: "用清爽亮色開襟衫搭配白 T 與高腰裙，穿出日系自然感",
+    story:
+      "保留樣本圖的清新基調，把外套與裙擺的柔和線條做為主角，讓整體輕鬆卻不隨便。",
+    hairstyle: ["自然低馬尾", "半紮髮", "微彎短髮"],
+    makeup: ["透明底妝", "自然睫毛", "水潤珊瑚唇"],
+    clothing: ["輕薄針織外套", "白色短袖 T 恤", "高腰寬裙"],
+    accessories: ["細項鍊", "小圈耳環", "草編手環"],
+    bag: ["帆布袋", "草編托特包"],
+    shoes: ["平底涼鞋", "帆布鞋"],
+  },
+  sporty: {
+    label: "運動",
+    icon: Dumbbell,
+    mood: "俐落、輕快、有活力",
+    title: "清爽機能運動穿搭",
+    heroPalette: ["白色", "淺灰", "冰藍", "石墨黑"],
+    headline: "以抗 UV 輕薄外套延伸成運動休閒層次，乾淨又有精神",
+    story:
+      "保留樣本圖中抗 UV 外套的概念，改用更機能感的材質，搭配合身上衣與運動裙褲。",
+    hairstyle: ["高馬尾", "髮箍收整", "俐落編髮"],
+    makeup: ["防汗底妝", "自然提氣色唇膏", "淡眉"],
+    clothing: ["抗 UV 輕外套", "機能背心", "高腰裙褲"],
+    accessories: ["耳釘", "運動手錶"],
+    bag: ["輕量尼龍包", "斜背小包"],
+    shoes: ["慢跑鞋", "輕量訓練鞋"],
+  },
+  cute: {
+    label: "可愛",
+    icon: Heart,
+    mood: "溫柔、甜美、親和",
+    title: "奶油甜感可愛穿搭",
+    heroPalette: ["奶油黃", "米白", "柔粉", "杏色"],
+    headline: "把奶油色針織外套變成甜美主角，搭配柔軟裙擺更有少女感",
+    story:
+      "在樣本人物的清新感上多加一點可愛氛圍，版型維持簡單，靠色彩與細節增加甜度。",
+    hairstyle: ["低雙馬尾", "空氣瀏海", "公主頭"],
+    makeup: ["粉嫩腮紅", "臥蠶提亮", "果凍唇"],
+    clothing: ["短版開襟衫", "白色娃娃領上衣", "A 字中裙"],
+    accessories: ["珍珠耳環", "蝴蝶結髮夾", "細鍊項鍊"],
+    bag: ["迷你方包", "奶油色肩背包"],
+    shoes: ["瑪莉珍鞋", "芭蕾平底鞋"],
+  },
+  sexy: {
+    label: "性感",
+    icon: Wand2,
+    mood: "成熟、柔美、自信",
+    title: "柔和成熟性感穿搭",
+    heroPalette: ["奶霜白", "焦糖米", "香檳金", "深咖"],
+    headline: "延伸樣本的溫柔線條感，透過腰線、領口與材質做出成熟女人味",
+    story:
+      "不走強烈暴露路線，而是用合身上衣、微露鎖骨與垂墜裙擺讓整體更有女人味。",
+    hairstyle: ["低盤髮", "大波浪側分", "鬆感低馬尾"],
+    makeup: ["光澤底妝", "上揚眼線", "裸棕修容", "焦糖玫瑰唇"],
+    clothing: ["合身針織罩衫", "低領背心", "高腰垂墜長裙"],
+    accessories: ["垂墜耳環", "鎖骨項鍊", "細金手環"],
+    bag: ["小型手拿包", "硬挺肩背包"],
+    shoes: ["細帶涼鞋", "尖頭低跟鞋"],
+  },
+};
+
+const outfitSketch = {
+  outer: "奶油黃圓領開襟外套",
+  top: "白色簡約上衣",
+  skirt: "高腰綁帶中長寬裙",
+  shoes: "藍白條紋楔形鞋",
+};
+
+function SectionTitle({ children }) {
+  return <div className="text-[11px] tracking-[0.28em] uppercase text-stone-500">{children}</div>;
+}
+
+function Pill({ children }) {
+  return <div className="rounded-full border border-stone-300 bg-white px-3 py-1 text-xs text-stone-700">{children}</div>;
+}
+
+function ItemCard({ title, items, icon: Icon }) {
+  return (
+    <div className="rounded-[24px] border border-stone-300 bg-[#fffdf8] p-4 shadow-[0_8px_24px_rgba(0,0,0,0.04)]">
+      <div className="mb-3 flex items-center gap-2 text-sm font-medium text-stone-700">
+        <Icon className="h-4 w-4" />
+        {title}
+      </div>
+      <div className="flex flex-wrap gap-2">
+        {items.map((item) => (
+          <Badge key={item} variant="secondary" className="rounded-full bg-stone-100 px-3 py-1 text-stone-700 hover:bg-stone-100">
+            {item}
+          </Badge>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+export default function StyleAdvisorApp() {
+  const [styleKey, setStyleKey] = useState("office");
+  const [name, setName] = useState("樣本人物");
+  const [notes, setNotes] = useState("整體形象偏日系手繪感、清新溫柔，適合以柔和亮色與自然線條做搭配。");
+  const [occasion, setOccasion] = useState("通勤 / 送禮 / 日常外出");
+
+  const current = useMemo(() => styles[styleKey], [styleKey]);
+  const CurrentIcon = current.icon;
+
+  const stylingMemo = useMemo(() => {
+    return `以 ${current.heroPalette[0]} 與 ${current.heroPalette[2]} 為主色，保留樣本人物的清新感。建議以 ${outfitSketch.outer} 作為亮點，內搭 ${outfitSketch.top}，下身選 ${outfitSketch.skirt}，最後用 ${outfitSketch.shoes} 做整體記憶點。`;
+  }, [current]);
+
+  return (
+    <div className="min-h-screen bg-[#f7f3ea] p-5 md:p-8 text-stone-800">
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="mx-auto max-w-7xl rounded-[36px] border-[3px] border-[#d9c97f] bg-[#fbf8f0] p-4 md:p-6 shadow-[0_20px_60px_rgba(0,0,0,0.06)]"
+      >
+        <div className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
+          <Card className="rounded-[30px] border border-stone-300 bg-[#fcfbf6] shadow-none">
+            <CardContent className="p-5 md:p-7">
+              <div className="grid gap-6 md:grid-cols-[0.92fr_1.08fr]">
+                <div className="rounded-[28px] border border-stone-200 bg-[linear-gradient(180deg,#f8f7f1,white)] p-5">
+                  <SectionTitle>Sample Figure</SectionTitle>
+                  <div className="mt-4 flex min-h-[580px] items-center justify-center rounded-[26px] border border-dashed border-stone-300 bg-[#f7f4ec] p-4">
+                    <div className="relative h-full w-full max-w-[320px]">
+                      <div className="absolute left-1/2 top-6 h-16 w-16 -translate-x-1/2 rounded-full border border-stone-300 bg-[#f4dcc7]" />
+                      <div className="absolute left-1/2 top-18 h-24 w-16 -translate-x-1/2 rounded-[40px] bg-[#c79b67] opacity-70 blur-[1px]" />
+                      <div className="absolute left-1/2 top-28 h-28 w-36 -translate-x-1/2 rounded-[28px] border border-[#dccf7f] bg-[#efe76d]" />
+                      <div className="absolute left-1/2 top-36 h-28 w-24 -translate-x-1/2 rounded-[18px] bg-white" />
+                      <div className="absolute left-[26%] top-36 h-28 w-7 rotate-[6deg] rounded-full bg-[#efe76d]" />
+                      <div className="absolute right-[26%] top-36 h-28 w-7 -rotate-[6deg] rounded-full bg-[#efe76d]" />
+                      <div className="absolute left-1/2 top-60 h-56 w-52 -translate-x-1/2 rounded-t-[18px] rounded-b-[40%] bg-[#c8b091]" />
+                      <div className="absolute left-1/2 top-[250px] h-7 w-32 -translate-x-1/2 rounded-full bg-[#cab293]" />
+                      <div className="absolute left-[42%] top-[240px] h-10 w-4 rotate-12 rounded-full bg-[#cab293]" />
+                      <div className="absolute right-[42%] top-[240px] h-10 w-4 -rotate-12 rounded-full bg-[#cab293]" />
+                      <div className="absolute left-[42%] top-[468px] h-24 w-4 rounded-full bg-[#f4dcc7]" />
+                      <div className="absolute right-[42%] top-[468px] h-24 w-4 rounded-full bg-[#f4dcc7]" />
+                      <div className="absolute left-[37%] top-[560px] h-10 w-12 -rotate-[8deg] rounded-[14px] bg-[repeating-linear-gradient(180deg,#3158b8_0_6px,#ffffff_6px_12px)]" />
+                      <div className="absolute right-[37%] top-[560px] h-10 w-12 rotate-[8deg] rounded-[14px] bg-[repeating-linear-gradient(180deg,#3158b8_0_6px,#ffffff_6px_12px)]" />
+                      <div className="absolute left-0 top-[330px] h-36 w-20 rounded-[24px] border border-stone-300 bg-[#b69879] opacity-80" />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-5">
+                  <div>
+                    <SectionTitle>Fashion Note</SectionTitle>
+                    <div className="mt-3 flex items-center gap-3 text-2xl font-semibold text-stone-900">
+                      <CurrentIcon className="h-6 w-6" />
+                      {current.title}
+                    </div>
+                    <p className="mt-4 text-[30px] leading-[1.45] font-medium tracking-wide text-stone-900 md:text-[36px]">
+                      {current.headline}
+                    </p>
+                    <p className="mt-4 max-w-xl text-base leading-8 text-stone-700">{current.story}</p>
+                  </div>
+
+                  <div className="rounded-[28px] border border-stone-300 bg-[#fffef9] p-5">
+                    <SectionTitle>Style Switch</SectionTitle>
+                    <div className="mt-4 grid gap-3 md:grid-cols-[1fr_180px]">
+                      <div className="grid grid-cols-2 gap-3">
+                        <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="人物名稱" className="rounded-2xl border-stone-300 bg-white" />
+                        <Input value={occasion} onChange={(e) => setOccasion(e.target.value)} placeholder="場合" className="rounded-2xl border-stone-300 bg-white" />
+                      </div>
+                      <Select value={styleKey} onValueChange={setStyleKey}>
+                        <SelectTrigger className="rounded-2xl border-stone-300 bg-white">
+                          <SelectValue placeholder="切換風格" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {Object.entries(styles).map(([key, value]) => (
+                            <SelectItem key={key} value={key}>{value.label}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <Textarea
+                      value={notes}
+                      onChange={(e) => setNotes(e.target.value)}
+                      className="mt-3 min-h-[110px] rounded-2xl border-stone-300 bg-white"
+                    />
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      {current.heroPalette.map((tone) => (
+                        <Pill key={tone}>{tone}</Pill>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="rounded-[28px] border border-stone-300 bg-[#fffef9] p-5">
+                      <SectionTitle>Coordinate Item</SectionTitle>
+                      <div className="mt-4 space-y-4 text-sm leading-7 text-stone-700">
+                        <div className="flex items-start justify-between gap-4 border-b border-stone-200 pb-3">
+                          <span>{outfitSketch.outer}</span>
+                          <span className="text-stone-500">外套</span>
+                        </div>
+                        <div className="flex items-start justify-between gap-4 border-b border-stone-200 pb-3">
+                          <span>{outfitSketch.top}</span>
+                          <span className="text-stone-500">上衣</span>
+                        </div>
+                        <div className="flex items-start justify-between gap-4 border-b border-stone-200 pb-3">
+                          <span>{outfitSketch.skirt}</span>
+                          <span className="text-stone-500">裙裝</span>
+                        </div>
+                        <div className="flex items-start justify-between gap-4">
+                          <span>{outfitSketch.shoes}</span>
+                          <span className="text-stone-500">鞋子</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="rounded-[28px] border border-stone-300 bg-[#fffef9] p-5">
+                      <SectionTitle>Stylist Memo</SectionTitle>
+                      <p className="mt-4 text-sm leading-8 text-stone-700">{stylingMemo}</p>
+                      <div className="mt-5 flex flex-wrap gap-2">
+                        <Badge className="rounded-full bg-[#efe76d] px-3 py-1 text-stone-800 hover:bg-[#efe76d]">{current.mood}</Badge>
+                        <Badge variant="secondary" className="rounded-full px-3 py-1">{occasion}</Badge>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <div className="space-y-5">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <ItemCard title="髮型" items={current.hairstyle} icon={Scissors} />
+              <ItemCard title="彩妝" items={current.makeup} icon={Sparkles} />
+              <ItemCard title="服飾" items={current.clothing} icon={Shirt} />
+              <ItemCard title="飾品" items={current.accessories} icon={Gem} />
+              <ItemCard title="包包" items={current.bag} icon={Handbag} />
+              <ItemCard title="鞋子" items={current.shoes} icon={Footprints} />
+            </div>
+
+            <div className="rounded-[30px] border border-stone-300 bg-[#fffdf8] p-5 shadow-[0_8px_24px_rgba(0,0,0,0.04)]">
+              <SectionTitle>Presentation Style</SectionTitle>
+              <div className="mt-4 space-y-3 text-sm leading-8 text-stone-700">
+                <p>這一版版面已改成接近妳附圖的呈現方式：左側大人物造型、右側手帳式搭配說明、下方整理 Coordinate Item。</p>
+                <p>整體用奶油色、紙感底色、手稿感區塊與編輯排版，讓畫面更像時尚插畫提案，而不是一般電商卡片。</p>
+                <p>後續可再升級成真正「上傳人物照片 → 自動生成插畫風穿搭頁」的版本。</p>
+              </div>
+              <div className="mt-5 flex flex-wrap gap-3">
+                <Button className="rounded-full bg-stone-900 px-5 hover:bg-stone-900">生成今日穿搭</Button>
+                <Button variant="outline" className="rounded-full border-stone-300 bg-transparent px-5">輸出造型卡</Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </motion.div>
+    </div>
+  );
+}
